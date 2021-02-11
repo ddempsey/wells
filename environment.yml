@@ -8,4 +8,5 @@ dependencies:
   - scipy=1.6.0
   - ipykernel=5.1.0
   - ipywidgets=7.6.3
+  - matplotlib=3.3.3
 prefix: /anaconda3/envs/wells
