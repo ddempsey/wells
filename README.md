@@ -1,7 +1,12 @@
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/ddempsey/wells/HEAD?filepath=well_test.ipynb)
+
 # wells
 Jupyter Notebooks for teaching well testing
 
-## Installation
+## Cloud Access
+Use the [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/ddempsey/wells/HEAD?filepath=well_test.ipynb) badge to open a binder notebook.
+
+## Local Installation
 
 Ensure you have Anaconda Python 3.7 installed. Then
 
@@ -38,5 +43,3 @@ jupyter notebook
 Open the `well_test.ipynb` notebook and select the `wells` environment in `Kernel > Change kernel`.
 
 Run the notebook cells.
-
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/ddempsey/wells/HEAD?filepath=well_test.ipynb)
