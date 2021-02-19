@@ -420,6 +420,9 @@ class Well(object):
         self.H=H
         self.s0 = 0.05
         self.S = 1.9e-3
+        if itest == 5:
+            # scale elastic storage for layer thickness
+            self.S *= H/2.
         self.Sy = 1.9e-1
         self.itest=itest
         self.approx=approx
@@ -427,6 +430,8 @@ class Well(object):
         self.analysis=analysis
         self.image=image
         self.barrier=barrier
+        if itest == 3:
+            self.barrier = True
         self.ax1 = None
         self.ax2 = None
         self.sc = Scene()
@@ -721,8 +726,8 @@ class Well(object):
             self.ax2.set_xscale('log')
         if self.itest == 5:
             self.ax2.set_yscale('log')
-            self.ax2.plot(tv, s0, 'r--', label='elastic Theis')
-            self.ax2.plot(tv, s1, 'b--', label='water table Theis')
+            self.ax2.plot(tv, s0, 'r--', label='Theis, $S=bS_s$')
+            self.ax2.plot(tv, s1, 'b--', label='Theis, $S=S_y$')
             self.ax2.legend()
         self.ax2.xaxis.grid(which='minor')
         self.ax2.yaxis.grid()
@@ -771,7 +776,7 @@ def show_moenchneuman(**kwargs):
     
     plt.show()
 def show_theis_image(**kwargs):
-    w = Well(itest=3, H=2, semilog=True, approx=True, **kwargs)
+    w = Well(itest=3, H=2, semilog=True, approx=True, barrier=True, **kwargs)
     w.fig = plt.figure(figsize=(12,6))
     w.ax1 = plt.axes([0.05, 0.15, 0.55, 0.7])
     
@@ -850,7 +855,7 @@ def unconfined_aquifer():
     t = FloatLogSlider(value=1.0, description=r'$t$ [day]', base = 10, min=-1, max = 2, step = 0.2, continuous_update = False)
     r = FloatSlider(value=200, description=r'$r$ [m]', min = 100, max = 500, step = 100, continuous_update = False)
     T = FloatSlider(value=300, description=r'$T$ [m$^2$/day]', min = 100, max = 500, step = 100, continuous_update = False)
-    H = FloatSlider(value=2, description=r'$H$ [m]', min=2, max = 5, step = 1.5, continuous_update = False)
+    H = FloatSlider(value=2, description=r'$b$ [m]', min=2, max = 5, step = 1.5, continuous_update = False)
     io = interactive_output(show_moenchneuman, {'Q':Q,'t':t,'r':r,'T':T,'H':H})
     return VBox([HBox([Q,t,H]),HBox([T,r]),io])
 def all_options(analysis=True):
@@ -863,7 +868,7 @@ def all_options(analysis=True):
     r = FloatSlider(value=200, description=r'$r$ [m]', min = 100, max = 500, step = 100, continuous_update = False)
     T = FloatSlider(value=300, description=r'$T$ [m$^2$/day]', min = 100, max = 500, step = 100, continuous_update = False)
     c = FloatLogSlider(value=1.e5, description=r'$c$ [day]', base = 10, min=2, max = 6, step = 1, continuous_update = False)
-    H = FloatSlider(value=2, description=r'$H$ [m]', min=2, max = 5, step = 1.5, continuous_update = False)
+    H = FloatSlider(value=2, description=r'$b$ [m]', min=2, max = 5, step = 1.5, continuous_update = False)
     io = interactive_output(plot_theis, {'Q':Q,'t':t,'r':r,'T':T,'approx':approx,'semilog':semilog,'itest':options,'image':image,'c':c, 'H':H, 'analysis':fixed(analysis)})
     return VBox([HBox([options]),HBox([Q,t,approx]),HBox([T,r,semilog]),HBox([H,c,image]),io])
 
