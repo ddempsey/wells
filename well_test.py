@@ -775,6 +775,17 @@ def show_moenchneuman(**kwargs):
     w.draw_curve()
     
     plt.show()
+def show_hunt2003(**kwargs):
+    w = Well(itest=6, semilog=True, approx=True, **kwargs)
+    w.fig = plt.figure(figsize=(12,6))
+    w.ax1 = plt.axes([0.05, 0.15, 0.55, 0.7])
+    
+    w.draw_scene()    
+    w.draw_drawdown()
+    w.ax2 = plt.axes([0.70, 0.15, 0.35, 0.7])
+    w.draw_curve()
+    
+    plt.show()
 def show_theis_image(**kwargs):
     w = Well(itest=3, H=2, semilog=True, approx=True, barrier=True, **kwargs)
     w.fig = plt.figure(figsize=(12,6))
@@ -857,6 +868,14 @@ def unconfined_aquifer():
     T = FloatSlider(value=300, description=r'$T$ [m$^2$/day]', min = 100, max = 500, step = 100, continuous_update = False)
     H = FloatSlider(value=2, description=r'$b$ [m]', min=2, max = 5, step = 1.5, continuous_update = False)
     io = interactive_output(show_moenchneuman, {'Q':Q,'t':t,'r':r,'T':T,'H':H})
+    return VBox([HBox([Q,t,H]),HBox([T,r]),io])
+def streamflow_depletion():
+    Q = FloatSlider(value=1000, description=r'$Q$ [m$^3$/day]', min = 500, max = 1500, step = 500, continuous_update = False)
+    t = FloatLogSlider(value=1.0, description=r'$t$ [day]', base = 10, min=-1, max = 2, step = 0.2, continuous_update = False)
+    r = FloatSlider(value=200, description=r'$r$ [m]', min = 100, max = 500, step = 100, continuous_update = False)
+    T = FloatSlider(value=300, description=r'$T$ [m$^2$/day]', min = 100, max = 500, step = 100, continuous_update = False)
+    H = FloatSlider(value=2, description=r'$b$ [m]', min=2, max = 5, step = 1.5, continuous_update = False)
+    io = interactive_output(show_hunt2003, {'Q':Q,'t':t,'r':r,'T':T,'H':H})
     return VBox([HBox([Q,t,H]),HBox([T,r]),io])
 def all_options(analysis=True):
     options = Dropdown(options = {'confined':1, 'leaky aquifer':2, 'flow barrier':3, 'recharge source':4, 'unconfined':5}, value = 1, description='Aquifer type')
