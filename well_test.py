@@ -517,10 +517,11 @@ class Well(object):
             self.ax1.plot([self.sc._WX-self.sc._WW/2, self.sc._WX-self.sc._WW/2], [self.sc._YCl, self.sc._YL], 'k-')
             self.ax1.plot([self.sc._WX+self.sc._WW/2, self.sc._WX+self.sc._WW/2], [self.sc._YCl, self.sc._YL], 'k-')
             
-            self.ax1.arrow(self.sc._WX+4*self.sc._WW, self.sc._YCl/3, -3*self.sc._WW, 0, **self.sc.akws)
-            self.ax1.arrow(self.sc._WX+4*self.sc._WW, self.sc._YCl*2/3, -3*self.sc._WW, 0, **self.sc.akws)
-            self.ax1.arrow(self.sc._WX-4*self.sc._WW, self.sc._YCl/3, 3*self.sc._WW, 0, **self.sc.akws)
-            self.ax1.arrow(self.sc._WX-4*self.sc._WW, self.sc._YCl*2/3, 3*self.sc._WW, 0, **self.sc.akws)
+            if self.itest != 0:
+                self.ax1.arrow(self.sc._WX+4*self.sc._WW, self.sc._YCl/3, -3*self.sc._WW, 0, **self.sc.akws)
+                self.ax1.arrow(self.sc._WX+4*self.sc._WW, self.sc._YCl*2/3, -3*self.sc._WW, 0, **self.sc.akws)
+                self.ax1.arrow(self.sc._WX-4*self.sc._WW, self.sc._YCl/3, 3*self.sc._WW, 0, **self.sc.akws)
+                self.ax1.arrow(self.sc._WX-4*self.sc._WW, self.sc._YCl*2/3, 3*self.sc._WW, 0, **self.sc.akws)
 
         well2 = Rectangle((self.sc._WX+self.r/750-self.sc._WW/4,0), self.sc._WW/2, self.sc._YL, fc = np.array([200,200,200])/255, zorder=1, ec='k')
         self.ax1.add_patch(well2)
@@ -610,8 +611,6 @@ class Well(object):
         if self.itest == 4:
             recharge = Rectangle((0.55,0), 0.45, self.sc._YL-self.s0, fc = '#99CCFF', zorder=2, ec=None)
             self.ax1.add_patch(recharge)
-        
-        
     def draw_drawdown(self):
         
         x = np.linspace(0,1.01,1001)
