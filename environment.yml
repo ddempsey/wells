@@ -9,4 +9,6 @@ dependencies:
   - ipykernel=5.1.0
   - ipywidgets=7.6.3
   - matplotlib=3.3.3
+  - pandas=1.2.0
+  - xlrd=1.2.0
 prefix: /anaconda3/envs/wells
