@@ -101,10 +101,12 @@ class Hydrograph(object):
             for er,c in zip(self.er,self.c):
                 i = self.c.index(c)
                 v = np.pad(er*vs, [i,0])[:self.n-2]
-                vn = v[n]
+                if n < len(v):
+                    vn = v[n]
                 v = v*np.sign(vs)
-                v[n] = vn
-                if hint: 
+                if n < len(v):
+                    v[n] = vn
+                if hint and n < len(v): 
                     ax.bar(self.t[n], v[n], self.dt, alpha=0.25, 
                         color=self.c[i], bottom=bin)
                     bin += v[n]
@@ -112,7 +114,8 @@ class Hydrograph(object):
                         ax.text(self.t[n]+self.dt/2., bin-v[n]/2., 
                             '$\leftarrow=${:2.1f}'.format(self.er[i])+r'$\times$'+'{:2.1f} '.format(vs[n-i]), 
                             ha='left', va='center', color='r')
-                v[n] = 0.
+                if n < len(v):
+                    v[n] = 0.
                 ax.bar(self.t[:self.n-2], v, self.dt, alpha=0.5, 
                     color=self.c[i], bottom= bottom)
                 bottom += v
