@@ -1,15 +1,17 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import cm
 from scipy.linalg.basic import solve
 from scipy.special import lambertw as LW
 from scipy.optimize import root
 from scipy.integrate import solve_ivp
 
-from ipyleaflet import Map, basemaps, Marker, Polyline, Polygon, DivIcon
-from ipywidgets import HBox, VBox, IntSlider, FloatSlider
+from ipyleaflet import Map, basemaps, Marker, Polyline, Polygon, DivIcon, AwesomeIcon
+from ipywidgets import HBox, VBox, IntSlider, FloatSlider, Button, Layout
 from pyproj import Proj, transform
 
 from functools import partial
+from random import random
 
 from scipy.special import expi
 
@@ -117,27 +119,30 @@ def xy2ll(x,y,lat0,lon0):
     lat,lon = transform(inProj,outProj,x+x0,y+y0)
     return list(lat), list(lon)
 
-def TheisContours(ws):
+def TheisContours(T, ws, qs):
     lats = []
     lons = []
     for w in ws:
         lat,lon = w.location
         lats.append(lat); lons.append(lon)
     xs,ys = transform(outProj, inProj, lats, lons)
-    n = 100
+    n = 200
     xx,yy = np.meshgrid(np.linspace(np.min(xs)-1.e4,np.max(xs)+1.e4,n), 
         np.linspace(np.min(ys)-1.e4,np.max(ys)+1.e4,n))
     hh = 0.*xx
-    for w,x,y in zip(ws,xs,ys):
-        hh += Theis(np.sqrt((xx.flatten()-x)**2+(yy.flatten()-y)**2), 100.*24*3600, 0.025, 1.e-4, 0.04).reshape(xx.shape)
+    for w,x,y,q in zip(ws,xs,ys,qs):
+        hh += Theis(np.sqrt((xx.flatten()-x)**2+(yy.flatten()-y)**2), 100.*24*3600, T, 1.e-4, q).reshape(xx.shape)
     lat,lon=transform(inProj,outProj,xx.flatten(),yy.flatten())
-    cs = plt.contour(lat.reshape(xx.shape), lon.reshape(yy.shape), hh, levels=(0.5,0.75,1,1.25,1.5,1.75,2.0))
+    cs = plt.contourf(lat.reshape(xx.shape), lon.reshape(yy.shape), hh, 
+        levels=(0.5,0.75,1,1.25,1.5,1.75,2.0), extend='both')
     ts = plt.clabel(cs)
     plt.close()
     
     allsegs = cs.allsegs
     allkinds = cs.allkinds
-
+    cmap = cm.Blues
+    colors = ['#%02x%02x%02x' % tuple(int(j*255) for j in cmap(i)[:3]) for i in np.linspace(0,1,len(allsegs))]
+    alphas = np.linspace(0.2,0.7,len(allsegs))
     ps = []
     for clev in range(len(cs.allsegs)):
         kinds = None if allkinds is None else allkinds[clev]
@@ -147,8 +152,8 @@ def TheisContours(ws):
                         color='yellow',
                         weight=1,
                         opacity=1.,
-                        fill_color=None,
-                        fill_opacity=0.0
+                        fill_color=colors[clev],
+                        fill_opacity=alphas[clev]
         )
         ps.append(polygons)
     return ps,ts
@@ -170,6 +175,9 @@ def split_contours(segs, kinds=None):
     More information:
     https://matplotlib.org/3.3.3/_modules/matplotlib/contour.html#ClabelText
     https://matplotlib.org/3.1.0/api/path_api.html#matplotlib.path.Path
+
+    Solution from here:
+    https://stackoverflow.com/questions/65634602/plotting-contours-with-ipyleaflet
     """
     if kinds is None:
         return segs    # nothing to be done
@@ -211,15 +219,30 @@ def travel_time_fun():
     t.observe(on_change)
     return VBox([m, HBox([Q, t])])
 
-def superposition_fun():
+def superposition_fun(T=0.025):
+    tc = partial(TheisContours, T)
     c = [-43.51876443245584, 172.66858981519297]
-    m = Map(basemap=basemaps.Esri.WorldImagery, center=c, zoom=14)
-    w1 = Marker(location=[-43.51876443245584, 172.66858981519297], draggable=True)    
-    w2 = Marker(location=[-43.5158209576725, 172.68432984856096], draggable=True)
-    m.add_layer(w1)
-    m.add_layer(w2)
+    m = Map(basemap=basemaps.Esri.WorldImagery, center=c, zoom=13)
+    ws = []
+    Qs = []
+    bs = []
+    for c in ['green','lightblue','red','pink']:
+        icon = AwesomeIcon(name='fa-tint', marker_color=c, icon_color='black', spin=False)
+        w = Marker(location=[-43.51876443245584+(random()-0.5)*0.01, 
+            172.66858981519297+(random()-0.5)*0.01], draggable=True, icon=icon)    
+        m.add_layer(w)
+        ws.append(w)
+        
+        Q = FloatSlider(value=10, description=r'$Q$ [L/s]', min = 0, max = 40, step = 5, 
+            continuous_update = False, layout=Layout(max_width='230px'),
+            style = {'description_width': '60px'})
+        b = Button(disabled=False,icon='fa-tint',layout=Layout(max_width='230px'))
+        b.style.button_color = c
+        Qs.append(Q)
+        bs.append(b)        
 
-    ps0,ts = TheisContours([w1,w2])
+    qs = [Q.value/1.e3 for Q in Qs]
+    ps0,ts = tc(ws,qs)
     for polygons in ps0:
         m.add_layer(polygons)
     a = A()
@@ -231,7 +254,8 @@ def superposition_fun():
         a.tsms.append(tsm)
 
     def on_change(a, event):
-        ps, ts = TheisContours([w1,w2])
+        qs = [Q.value/1.e3 for Q in Qs]
+        ps, ts = tc(ws, qs)
         for p,p0 in zip(ps,ps0):
             p0.locations = p.locations
 
@@ -245,9 +269,10 @@ def superposition_fun():
             tsms.append(tsm)
         a.tsms = tsms
 
-    w1.observe(partial(on_change,a))
-    w2.observe(partial(on_change,a))
-    return m#VBox([m, HBox([Q, t])])
+    for w in ws+Qs:
+        w.observe(partial(on_change,a))
+    # w2.observe(partial(on_change,a))
+    return VBox([m, HBox([VBox([b,Q]) for Q,b in zip(Qs,bs)])])
 
 if __name__ == "__main__":
     superposition_fun()
