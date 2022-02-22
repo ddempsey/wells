@@ -43,6 +43,15 @@ def _power_method(it,x1,x2):
     ax.set_xlim([-1.1,1.1])
     ax.set_ylim([-1.1,1.1])
 
+    ax.text(1.05, 0.08, 'x=np.dot(A,x)', transform=ax.transAxes, 
+        ha='left', va='center', size=8, alpha=0.2)
+    ax.text(1.05, 0.06, 'x=x/np.sqrt(np.dot(x.T,x))', transform=ax.transAxes, 
+        ha='left', va='center', size=8, alpha=0.2)
+    ax.text(1.05, 0.04, 'ev=np.dot(np.dot(x.T,A),x)/np.dot(x.T,x)', transform=ax.transAxes, 
+        ha='left', va='center', size=8, alpha=0.2)
+    ax.text(1.05, 0.02, 'iteration: copy-paste, or use for loop', transform=ax.transAxes, 
+        ha='left', va='center', size=8, alpha=0.2,fontstyle='italic')
+
 def power_method():    
     it = IntSlider(1, 1, 7, 1, description='iterations')
     x1 = FloatText(1)
