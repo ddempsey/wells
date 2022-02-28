@@ -51,7 +51,6 @@ def _power_method(it,x1,x2):
         ha='left', va='center', size=8, alpha=0.2)
     ax.text(1.05, 0.02, 'iteration: copy-paste, or use for loop', transform=ax.transAxes, 
         ha='left', va='center', size=8, alpha=0.2,fontstyle='italic')
-
 def power_method():    
     it = IntSlider(1, 1, 7, 1, description='iterations')
     x1 = FloatText(1)
@@ -59,6 +58,49 @@ def power_method():
     io = interactive_output(_power_method, {'it':it,'x1':x1,'x2':x2})
     
     return VBox([HBox([it,Label('$x_0$'),VBox([x1,x2])]),io])
+
+def _earthquake_response(ti):
+
+    f,(ax1,ax2) = plt.subplots(1,2,figsize=(12,6))
+
+    A=np.array([[1,-1,0],[-1,3,-2],[0,-2,5]])
+    ds,V = np.linalg.eig(A)
+    Vinv = np.linalg.inv(V)
+
+    t = np.linspace(0,20,101)
+    x0 = np.array([-3,-2,-1])
+    ci = np.dot(Vinv,x0)
+
+    cs = ['r','g','b']
+    dx,dy = [1.5,0.5]
+    xs = []
+    for i in range(3):
+        c = cs[i]
+        xi = np.sum([ci[j]*np.cos(ds[j]*t)*V[i,j] for j in range(3)],axis=0)
+        ax1.plot(t,xi,c+'-',label='$x_{:d}$'.format(i+1))
+        j = np.argmin(abs(t-ti))        
+        ax2.plot([xi[j]-dx,xi[j]+dx,xi[j]+dx,xi[j]-dx,xi[j]-dx],
+            [3-i+dy, 3-i+dy, 3-i-dy, 3-i-dy, 3-i+dy],c+'-')
+        ax2.fill_between([xi[j]-dx,xi[j]+dx],[3-i-dy,3-i-dy],[3-i+dy,3-i+dy],
+            color = c, alpha=0.5)
+        ax1.plot(ti,xi[j],c+'o')
+        xs.append(xi[j])
+    ax2.plot(xs, [3, 2, 1], 'k-o')
+    ax2.set_xlim([-5,5])
+    ax1.legend()
+    ax2.set_yticks([])
+    ax2.set_xlabel('horizontal position, $x$')
+    ax1.set_xlabel('time, $t$')
+    ax1.set_ylabel('horizontal position, $x$')
+
+    plt.show()
+
+
+def earthquake_response():
+    it = IntSlider(0, 0, 20, 1, description='time')
+    io = interactive_output(_earthquake_response, {'ti':it})    
+    return VBox([it,io])
+
 
 def test():
     pass
