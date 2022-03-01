@@ -2,9 +2,7 @@
 from ipywidgets import*
 import numpy as np
 from matplotlib import pyplot as plt
-from ipywidgets import (interact, fixed, interactive_output, 
-    HBox, Button, VBox, Output, IntSlider, Checkbox, FloatSlider, 
-    FloatLogSlider, Dropdown, FloatText, Label, Layout)
+from functools import partial
 
 def _power_method(it,x1,x2):
     
@@ -61,7 +59,7 @@ def power_method():
 
 def _earthquake_response(ti):
 
-    f,(ax1,ax2) = plt.subplots(1,2,figsize=(12,6))
+    f,(ax1,ax2) = plt.subplots(1,2,figsize=(12,5))
 
     A=np.array([[1,-1,0],[-1,3,-2],[0,-2,5]])
     ds,V = np.linalg.eig(A)
@@ -94,13 +92,145 @@ def _earthquake_response(ti):
     ax1.set_ylabel('horizontal position, $x$')
 
     plt.show()
-
-
 def earthquake_response():
     it = IntSlider(0, 0, 20, 1, description='time')
     io = interactive_output(_earthquake_response, {'ti':it})    
     return VBox([it,io])
 
+def _euler_method(step, h):
+    
+    f,(ax, ax2) = plt.subplots(1,2, figsize=(12,5))
+
+    # initialise ODE
+    x = [0,]
+    y = [1,]
+    h0 = 0.1
+    
+    # setup axes limits
+    xlim = np.array([-0.05,1.15])
+    ylim = [-0.9,10]
+    ax.set_ylim(ylim)
+    ax.set_xlim(xlim)
+    
+    def dydx(x,y): 
+        return (1.+x*y)**2
+
+    for i in range(int(step)):
+        y.append(y[-1]+h0*dydx(x[-1], y[-1]))
+        x.append(x[-1]+h0)		
+        
+    if abs(step-int(step))>0.25:
+        # plot derivative
+        dydx0 = dydx(x[-1], y[-1])
+        ys = dydx0*(xlim - x[-1])+y[-1]
+        ax.plot(xlim, ys, 'r--')		
+        ax.text(0.95*xlim[-1], np.min([1.05*ys[-1],9.]), 'compute derivative: $f^{'+'({:d})'.format(int(step))+'}=(t^{'+'({:d})'.format(int(step))+'},x^{'+'({:d})'.format(int(step))+'})$', ha = 'right', va = 'bottom', color = 'r')
+    else:	
+        dy = 0.4
+        dx = 0.04
+        ax.arrow(x[-2], y[-2]-dy, h0, 0, length_includes_head = True, head_width = 0.2, head_length = 0.02, color= 'r', linewidth = 0.5)
+        ax.arrow(x[-1], y[-2]-dy, -h0, 0, length_includes_head = True, head_width = 0.2, head_length = 0.02, color= 'r', linewidth = 0.5)
+        ax.text(0.5*(x[-1]+x[-2]), y[-2]-2*dy, '$t^{'+'({:d})'.format(int(step))+'}=t^{'+'({:d})'.format(int(step-1))+'}+\Delta t$', ha = 'center', va = 'top', color = 'r')
+        
+        ax.arrow(x[-1]+dx, y[-2], 0, y[-1]-y[-2], length_includes_head = True, head_width = 0.02, head_length = 0.2, color= 'r', linewidth = 0.5)
+        ax.arrow(x[-1]+dx, y[-1], 0, -y[-1]+y[-2], length_includes_head = True, head_width = 0.02, head_length = 0.2, color= 'r', linewidth = 0.5)
+        
+        ax.text(x[-1]+2*dx, 0.5*(y[-1]+y[-2]), 'take step: $x^{'+'({:d})'.format(int(step))+'}=x^{'+'({:d})'.format(int(step-1))+'}+\Delta t\,f^{'+'({:d})'.format(int(step-1))+'}$', ha = 'left', va = 'center', color = 'r')
+                
+    ax.plot(x,y,'ko-', mfc = 'k')
+    
+    ax.plot(x[-1],y[-1],'ko', mfc = 'w')
+    
+    ax.set_xlabel('$t$')
+    ax.set_ylabel('$x$')
+    
+    # second plot, effect of step size
+    x = [0,]
+    y = [1,]
+    x0 = [0,]
+    y0 = [1,]
+    
+    while x[-1] < 1.:
+        y.append(y[-1]+h*dydx(x[-1], y[-1]))
+        x.append(x[-1]+h)	
+    while x0[-1] < 1.:
+        y0.append(y0[-1]+h0*dydx(x0[-1], y0[-1]))
+        x0.append(x0[-1]+h0)	
+
+    y0 = y0[:-1]
+    x0 = x0[:-1]
+    
+    ax2.plot(x,y,'ko-', mfc = 'k', label = 'h={:3.2f}'.format(h))
+    ax2.plot(x0,y0,'ko-', mfc = 'k', alpha = 0.5, label = 'h={:3.2f}'.format(h0))
+    
+    ax2.set_xlabel('$x$')
+    ax2.set_ylabel('$y(x)$')
+    ax2.set_ylim([0,20])
+    ax2.set_xlim(xlim)
+    
+    ax2.legend(loc=2)
+    plt.show()
+
+def euler_method():
+    
+    steps = FloatSlider(value=0.5, min=0.5, max=10, step=0.5, description='steps')
+    h = FloatSlider(value=0.1, min=0.02, max=0.2, step=0.02, description='h')
+    io = interactive_output(_euler_method, {'step':steps,'h':h})    
+    return VBox([HBox([steps, h]),io])
+
+def _euler_error(steps, predict_value):
+        
+    f,ax = plt.subplots(1,1, figsize=[12, 5])
+    p = [8, 8.5]
+    x = np.linspace(0,10., 1001)
+    
+    ax.set_xlim([0,10])
+    ax.plot([0,10],[0,0],'k:')
+    
+    def dvarsin(x, *p): 
+        return np.sin(p[0]*np.sin(x)*np.sqrt(x)+np.cos(p[1]*x)/(x+1))
+
+    xs = np.linspace(0, predict_value,10*steps)
+    h = xs[1]-xs[0]
+    ya = 0.*xs
+    for i in range(len(xs)-1):
+        ya[i+1] = ya[i] + h/2*(dvarsin(xs[i], *p)+dvarsin(xs[i+1], *p))
+        
+    ax.set_xlabel('time, $t$')
+    ax.set_ylabel('solution, $x$')
+    
+    # plot Euler steps
+    h = predict_value/steps
+    xs = np.arange(steps+1)*h
+    ys = 0.*xs
+    for i in range(steps):
+        ys[i+1] = ys[i] + h*dvarsin(xs[i], *p)
+        
+    ax.plot(xs,ys, '.b-', label = 'Euler')
+    
+    # plot error bar
+    xest = xs[-1]
+    yest = ys[-1]
+    ytrue = ya[-1]
+    
+    ax.plot([xest, xest], [yest, ytrue], 'r-', lw = 2, label = 'error')
+    ymid = 0.5*(yest+ytrue)
+    err = abs((yest-ytrue)/ytrue)*100
+    if err < 1.0:
+        wgt = 'bold'
+        err_str = ' err < 1%'
+    else:
+        wgt = 'normal'
+        err_str = ' err = {:d}%'.format(int(err))
+    
+    ax.text(xest, ymid, err_str, color = 'r', fontweight = wgt)        
+    ax.legend(loc = 4)
+
+def euler_error():
+    box1 = IntText(value = 20, description='with steps')
+    box2 = BoundedFloatText(value = 2.2, description='predict at')
+    io = interactive_output(_euler_error, {'steps':box1,'predict_value':box2})    
+    return VBox([HBox([box2, box1]),io])
 
 def test():
     pass
