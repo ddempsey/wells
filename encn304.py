@@ -3,6 +3,7 @@ from ipywidgets import*
 import numpy as np
 from matplotlib import pyplot as plt
 from functools import partial
+from scipy.optimize import root
 
 def _power_method(it,x1,x2):
     
@@ -170,7 +171,6 @@ def _euler_method(step, h):
     
     ax2.legend(loc=2)
     plt.show()
-
 def euler_method():
     
     steps = FloatSlider(value=0.5, min=0.5, max=10, step=0.5, description='steps')
@@ -225,12 +225,78 @@ def _euler_error(steps, predict_value):
     
     ax.text(xest, ymid, err_str, color = 'r', fontweight = wgt)        
     ax.legend(loc = 4)
-
 def euler_error():
     box1 = IntText(value = 20, description='with steps')
     box2 = BoundedFloatText(value = 2.2, description='predict at')
     io = interactive_output(_euler_error, {'steps':box1,'predict_value':box2})    
     return VBox([HBox([box2, box1]),io])
+
+def root_equation(yk1, yk, h, xk, f, *p):
+    return yk - yk1 + h*f(xk+h, yk1, *p) 
+    # implement backward Euler method
+def _euler_stability(method,step):
+    # create figure
+    f,ax = plt.subplots(1,1)
+    f.set_size_inches([12,5])
+
+    def dydx2(x,y): return -10*y
+    
+    x0,x1 = [0,1]
+    y0 = 1
+    
+    h = x1/step
+    
+    if method == 'Euler':
+        x = [x0,]
+        y = [y0,]
+        while x[-1] < x1:		
+            y.append(y[-1]+h*dydx2(x[-1],y[-1]))
+            x.append(x[-1]+h)
+            
+        ax.plot(x,y,'b--x', label='Euler')
+
+    elif method == 'Backward Euler':
+        x = [x0,]
+        y = [y0,]
+        while x[-1] < x1:
+            ynew = root(root_equation, y[-1], args = (y[-1], h, x[-1], dydx2))
+            y.append(ynew.x)
+            x.append(x[-1]+h)
+            
+        ax.plot(x,y,'r--x', label='Backward Euler')
+    
+    elif method == 'Improved Euler':
+        x = [x0,]
+        y = [y0,]
+        while x[-1] < x1:		
+            y.append(y[-1]+h/2.*(dydx2(x[-1],y[-1])+dydx2(x[-1]+h,y[-1]+h*dydx2(x[-1],y[-1]))))
+            x.append(x[-1]+h)
+            
+        ax.plot(x,y,'g--x', label='Improved Euler')
+    
+    xv = np.linspace(x0,y0,101)
+    yv = np.exp(-10*xv)
+    ax.plot(xv,yv,'c-', lw=2, label='exact')	
+    ax.legend(loc=1)
+    
+    ax.set_xticks([])
+    ax.set_yticks([])
+    
+    ax.set_xlim([x0,x1])
+    ax.set_xlabel('t')
+    ax.set_ylabel('x')
+    
+    ax.text(0.5, 0.95, 'a=-10, $\Delta t$={:4.3f}'.format(h), transform=ax.transAxes, ha = 'center', va = 'top')
+    plt.show()
+    
+def euler_stability():
+    steps = IntSlider(15, 3, 15, 1, description='steps')
+    method = Dropdown(
+    options=['Euler', 'Improved Euler', 'Backward Euler'],
+    value='Euler',
+    description='method')
+    io = interactive_output(_euler_stability, {'method':method,'step':steps})    
+    return VBox([HBox([steps, method]),io])
 
 def test():
     pass
