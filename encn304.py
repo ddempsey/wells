@@ -5,6 +5,9 @@ from matplotlib import pyplot as plt
 from functools import partial
 from scipy.optimize import root
 
+import warnings
+warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+
 def _power_method(it,x1,x2):
     
     A=np.array([[1,2],[2,1]])
@@ -429,6 +432,23 @@ def backward_euler():
     return VBox([HBox([steps, compare]),io])
 
 def test():
+    def f(t,x): return -x
+    t,x = [0,1]
+    dt = 0.1
+    x1 = x
+
+    for i in range(3):
+        x1 = x + dt*f(t,x1)
+        print(x,x1)
+
+    x2 = x1
+    for i in range(3):
+        x2 = x1 + dt*f(t,x2)
+        print(x1,x2)
+
+    print(np.exp(-dt))
+
+
     pass
 
 def main():
