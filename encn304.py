@@ -7,6 +7,12 @@ from scipy.optimize import root
 
 import warnings
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+from scipy.integrate import trapz
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+
+
+TEXTSIZE = 14
 
 def _power_method(it,x1,x2):
     
@@ -424,31 +430,235 @@ def _backward_euler(step, euler):
         ax.legend(loc=2)
 
     plt.show()
-
 def backward_euler():
     steps=FloatSlider(value=7.25, min=1.25, max=9, step=0.25, description='steps')
     compare=Checkbox(False, description='compare Euler')
     io=interactive_output(_backward_euler, {'euler':compare,'step':steps})    
     return VBox([HBox([steps, compare]),io])
 
+def f_int(x): return (x-2)*(x-5.5)*(x-7)/8+8
+def _trapezium(know_gx, subints, area, NN):
+
+    f,(ax,ax2) = plt.subplots(1,2,figsize=(15,6))
+
+
+    # configure area boolean
+    if area == 'None': area = 0
+    elif area =='A0': area = 1
+    elif area =='A1': area = 2
+    elif area =='A2': area = 3
+    elif area =='Atot': area = -1
+    
+    # plot function or data
+    if know_gx:
+        x = np.linspace(2,8,1001)
+        
+        y = f_int(x)
+        ax.plot(x,y,'r-', label='known function, $f(x)$')
+    else:
+        xi = np.array([2, 3.5, 6.8, 8.])
+        yi = np.array([7.8, 8.5, 8.1, 10.0])
+        ax.plot(xi,yi,'kx',ms=5,mew=2,label='known data, $(x_i,y_i)$')
+    
+    # show subintervals
+    if subints:
+        if know_gx:
+            N=3 	# number of subintervals
+            xi = np.linspace(x[0],x[-1],N+1)
+            yi = f_int(xi)
+            ax.plot(xi,yi,'kx',ms=5,mew=2,label='eval. function, $g(x_i)$')
+        ax.plot(xi,yi,'k--')
+        # dashed vertical lines
+        label = 'three subintervals'
+        for xii,yii in zip(xi,yi):
+            ax.plot([xii,xii],[0,yii],'k--',label=label)
+            label=None
+        # subinterval numbering
+        if area == 0:
+            for xi1,xi2,yi1,yi2,i in zip(xi[:-1],xi[1:],yi[:-1],yi[1:], range(len(xi))):
+                ax.text(0.5*(xi1+xi2), 0.25*(yi1+yi2), '$I_'+'{:d}'.format(i+1)+'$', ha = 'center', va = 'center', size = 14)
+        
+        if area > 0:	
+            i = area - 1		
+            patches = []
+            
+            i1 = i
+            i2 = i+2
+            if i2 == len(xi):
+                poly = np.array([list(xi[i1:])+[xi[-1],xi[i1]],list(yi[i1:])+[0,0]]).T
+            else:
+                poly = np.array([list(xi[i1:i2])+[xi[i2-1],xi[i1]],list(yi[i1:i2])+[0,0]]).T
+            xint = xi[i1:i2]
+            yint = yi[i1:i2]
+                
+            area = trapz(yint,xint)
+            polygon = Polygon(poly, zorder=1)
+            patches.append(polygon)
+            p = PatchCollection(patches, color = 'r', alpha = 0.2)
+            ax.add_collection(p)
+            
+            ax.text(np.mean(xint), 0.5*np.mean(yint), '$A_'+'{:d}'.format(i)+'$'+'\n$=$\n${:3.1f}$'.format(area), ha = 'center', va = 'center', size = 12)
+        
+        if area < 0:	
+            patches = []
+            area = trapz(yi,xi)
+            poly = np.array([list(xi)+[xi[-1],xi[0]],list(yi)+[0,0]]).T
+            polygon = Polygon(poly, zorder=1)
+            patches.append(polygon)
+            p = PatchCollection(patches, color = 'r', alpha = 0.2)
+            ax.add_collection(p)
+            
+            ax.text(np.mean(xi), 0.5*np.mean(yi), '$A_{tot}'+'$'+'\n$=$\n${:3.1f}$'.format(area), ha = 'center', va = 'center', size = 12)
+        
+    else:
+        if area < 0:
+            
+            patches = []
+            if know_gx:
+                poly = np.array([list(x)+[x[-1],x[0]],list(y)+[0,0]]).T
+                area = trapz(y,x)
+            else:
+                poly = np.array([list(xi)+[xi[-1],xi[0]],list(yi)+[0,0]]).T
+                area = trapz(yi,xi)
+                
+            polygon = Polygon(poly, zorder=1)
+            patches.append(polygon)
+            p = PatchCollection(patches, color = 'r', alpha = 0.2)
+            ax.add_collection(p)
+            
+            ax.text(5., 4, 'Area = {:3.1f}'.format(area), ha='center', va = 'center')
+        
+    
+    # plotting
+    ax.set_xlabel('time',size = TEXTSIZE)
+    ax.set_ylabel('temperature',size = TEXTSIZE)
+    ax.set_xlim([0,10])
+    ax.set_ylim([0, 15])
+    ax.legend(loc=2, prop={'size':TEXTSIZE})
+    
+    # fit polynomial to data
+    xi = np.array([2.5, 3.5, 4.5, 5.6, 8.6, 9.9, 13.0, 13.5])
+    yi = np.array([24.7, 21.5, 21.6, 22.2, 28.2, 26.3, 41.7, 54.8])
+    ak = fit_poly5(xi,yi)
+    trapezium_method(ak,[xi[0], xi[-1]],NN,ax2)
+    plt.show()
+
+# evaluate polynomial with coefficients A at locations XI
+def polyval(a,xi):
+	"""Evaluautes polynomial with coefficients A at points XI.
+	"""
+	yi = 0.*xi
+	for i,ai in enumerate(a):
+		yi = yi + ai*xi**i
+	return yi
+# fit a fifth order polynomial
+def fit_poly5(xi,yi):
+    """Return coefficients of fifth order polynomial fitted to data XI,YI.
+    """
+    # construct Vandemonde matrix
+    A = vandermonde(xi,5)
+    
+    # construct RHS vector
+    b = rhs(xi,yi,5)
+    
+    # solve Ax=b 
+    # (note: I am solving x = A^-1 b, which is not wildly efficient)
+    Ainv = np.linalg.inv(A)
+    ak = np.dot(Ainv, b)
+    
+    return ak
+
+# integrate exactly a fifth order polynomial
+def rhs(xi,yi,m):
+	"""Return least-squares righthand side vector for data XI, YI and polynomial order M
+	"""
+	# preallocate vector
+	rhs = np.zeros(m+1)
+	# compute terms
+	for i in range(m+1):
+		rhs[i] = np.sum(xi**i*yi)
+	
+	return rhs
+def vandermonde(xi,m):
+	"""Return Vandermonde matrix for data XI and polynomial order M
+	"""
+	# preallocate matrix
+	V = np.zeros((m+1,m+1))
+	# loop over rows
+	for i in range(m+1):
+		# loop over columns
+		for j in range(m+1):
+			V[i,j] = np.sum(xi**(i+j))
+	return V
+def int_poly5(ak, xlim):
+    akint = np.array([0.,]+[aki/(i+1) for i,aki in enumerate(ak)])
+    return polyval(akint, xlim[1]) - polyval(akint, xlim[0])
+
+# apply Trapezium method
+def trapezium_method(ak,xlim,N,ax):
+    """Apply Trapezium method with N subintervals to polynomial with coefficients
+       AK over the interval XLIM.
+    """
+    # construct subintervals and function evaluations
+    xin = np.linspace(xlim[0], xlim[1], N+1)
+    yin = polyval(ak,xin)
+    
+    # compute integral
+    dx = xin[1]-xin[0]
+    area = dx/2*(yin[0] + 2*np.sum(yin[1:-1]) + yin[-1])
+    area_true = int_poly5(ak,xlim)
+    
+    # plotting
+        # data
+    xi = np.array([2.5, 3.5, 4.5, 5.6, 8.6, 9.9, 13.0, 13.5])
+    yi = np.array([24.7, 21.5, 21.6, 22.2, 28.2, 26.3, 41.7, 54.8])
+    #ax.plot(xi,yi,'ko',mfc='w',mew=1.5,label='data')
+        # interpolating function
+    xv = np.linspace(xi[0],xi[-1],1001)
+    yv = polyval(ak,xv)
+    ax.plot(xv,yv,'r-',label='$f(x)$')
+        # subintervals
+    ax.plot(xin,yin,'k--x',mec='r',mew=1.5,label='subintervals')
+    for xini,yini in zip(xin,yin): 
+        ax.plot([xini,xini],[0,yini],'k--')
+                    
+    # plot upkeep
+    ax.legend(loc=2, prop={'size': TEXTSIZE})
+    ax.set_xlabel('time',size = TEXTSIZE)
+    ax.set_ylabel('temperature',size = TEXTSIZE)
+    str1 = '$A_{'+'{:d}'.format(N)+'}'+'={:3.1f}$'.format(area)
+    str2 = '$A_{\infty}=$'+'${:3.1f}$'.format(area_true)
+    str3 = '$\%\,\,err=$'+'${:3.1f}$'.format((area_true-area)/area_true*100)
+    ax.annotate(str1+'\n'+str2+'\n'+str3, xy=(.05,.7), xycoords='axes fraction', ha='left', va='top', size = 12)
+    
+    ylim = ax.get_ylim()
+    ax.set_ylim([0, ylim[-1]])
+
+
+def trapezium():
+    know_gx=Checkbox(False, description='$f(x)$ known')
+    subints=Checkbox(False, description='show subintervals')
+    area=Dropdown(
+    options=['None', 'A0','A1','A2','Atot'],
+    value='None',
+    description='show area')
+    N=IntSlider(value=1, min=1, max=10, step=1, description='# subintervals')
+    io=interactive_output(_trapezium, {'know_gx':know_gx,'subints':subints,'area':area, 'NN':N})    
+    return VBox([HBox([VBox([know_gx, subints, area]), N]),io])
+
+
 def test():
-    def f(t,x): return -x
-    t,x = [0,1]
-    dt = 0.1
-    x1 = x
+    x1,x2,x3,x4,x5 = [1,2,3,3,2]
+    dx = 1
 
-    for i in range(3):
-        x1 = x + dt*f(t,x1)
-        print(x,x1)
-
-    x2 = x1
-    for i in range(3):
-        x2 = x1 + dt*f(t,x2)
-        print(x1,x2)
-
-    print(np.exp(-dt))
-
-
+    Idx = dx/2.*(x1+2*x3+x5)
+    Idx2 = dx/4.*(x1+2*x2+2*x3+2*x4+x5)
+    Isim = dx/6*(x1+4*x2+2*x3+4*x4+x5)
+    Ir = (4*Idx2-Idx)/3.
+    print(Idx)
+    print(Idx2)
+    print(Isim)
+    print(Ir)
     pass
 
 def main():
