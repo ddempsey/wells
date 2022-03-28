@@ -659,6 +659,14 @@ def test():
     print(Idx2)
     print(Isim)
     print(Ir)
+
+    def f(x,y): return x**2-y**2
+    xs = [0,1,2]
+    ys = [1,2,3,4]
+    for y in ys:
+        print(0.5*(f(xs[0],y)+2*f(xs[1],y)+f(xs[-1],y)))
+    print(0.5*(1+2*(-5+-15)-29))
+    
     pass
 
 def main():
