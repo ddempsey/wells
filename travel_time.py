@@ -23,6 +23,7 @@ class GroundwaterMap(Map):
         super().__init__(*args, **kwargs)
         self.wells=[]
         self.contour_labels=[]
+        self.flag=False
     def add_well(self, location, icon=None):
         well = Marker(location=location, draggable=True, icon=icon)    
         self.add_layer(well)
@@ -179,7 +180,10 @@ class GroundwaterMap(Map):
         except KeyError:
             t = 100.
         for w,x,y,q in zip(self.wells,xs,ys,qs):
-            hh -= Theis(np.sqrt((xx.flatten()-x)**2+(yy.flatten()-y)**2), t*24*3600, T, 1.e-4, q).reshape(xx.shape)
+            if self.flag:
+                hh -= Theis(np.sqrt((xx.flatten()-x)**2+(yy.flatten()-y)**2), t*24*3600, T, 1.e-4, q).reshape(xx.shape)
+            else:
+                hh += Theis(np.sqrt((xx.flatten()-x)**2+(yy.flatten()-y)**2), t*24*3600, T, 1.e-4, q).reshape(xx.shape)
         lat,lon=transform(inProj,outProj,xx.flatten(),yy.flatten())
         cs = plt.contourf(lat.reshape(xx.shape), lon.reshape(yy.shape), hh, 
             levels=levels, extend='both')
@@ -315,6 +319,7 @@ def travel_time_fun():
         continuous_update = False, layout=Layout(max_width='270px'))
     th = BoundedFloatText(value=135, min=0, max=180, description='flow dir. [$^{\circ}$]',layout=Layout(max_width='150px'))
     m.add_well(center)
+    m.flag=True
     m.configure(widgets={'t':t, 'Q':Q, 'q':q, 'th':th}, func=partial(m.travel_time, 1.e-4, 0.03, 10.))
     return VBox([m, HBox([Q, t, q, th])])
 def superposition_fun(T=0.025):
